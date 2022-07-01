@@ -35,7 +35,7 @@ var verifyCommand = &cli.Command{
 		&cli.BoolFlag{
 			Name:  "pull",
 			Usage: "pull remote signatures before verification",
-			Value: true,
+			Value: false,
 		},
 		flagLocal,
 		flagUsername,
@@ -48,7 +48,7 @@ var verifyCommand = &cli.Command{
 
 func runVerify(ctx *cli.Context) error {
 	// initialize
-	verifier, err := getVerifier(ctx)
+	verifiers, err := getVerifiers(ctx)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func runVerify(ctx *cli.Context) error {
 	}
 
 	// core process
-	if err := verifySignatures(ctx.Context, verifier, manifestDesc, sigPaths); err != nil {
+	if err := verifySignatures(ctx.Context, verifiers, manifestDesc, sigPaths); err != nil {
 		return err
 	}
 
@@ -84,7 +84,7 @@ func runVerify(ctx *cli.Context) error {
 	return nil
 }
 
-func verifySignatures(ctx context.Context, verifier notation.Verifier, manifestDesc notation.Descriptor, sigPaths []string) error {
+func verifySignatures(ctx context.Context, verifiers []notation.Verifier, manifestDesc notation.Descriptor, sigPaths []string) error {
 	if len(sigPaths) == 0 {
 		return errors.New("verification failure: no signatures found")
 	}
@@ -96,22 +96,25 @@ func verifySignatures(ctx context.Context, verifier notation.Verifier, manifestD
 		if err != nil {
 			return err
 		}
-		desc, err := verifier.Verify(ctx, sig, opts)
-		if err != nil {
-			lastErr = fmt.Errorf("verification failure: %v", err)
-			continue
+		for _, verifier := range verifiers {
+			desc, err := verifier.Verify(ctx, sig, opts)
+			if err != nil {
+				lastErr = fmt.Errorf("verification failure: %v", err)
+				continue
+			}
+
+			if !desc.Equal(manifestDesc) {
+				lastErr = fmt.Errorf("verification failure: %s", manifestDesc.Digest)
+				continue
+			}
+			return nil
 		}
 
-		if !desc.Equal(manifestDesc) {
-			lastErr = fmt.Errorf("verification failure: %s", manifestDesc.Digest)
-			continue
-		}
-		return nil
 	}
 	return lastErr
 }
 
-func getVerifier(ctx *cli.Context) (notation.Verifier, error) {
+func getVerifiers(ctx *cli.Context) ([]notation.Verifier, error) {
 	certPaths := ctx.StringSlice(cmd.FlagCertFile.Name)
 	certPaths, err := appendCertPathFromName(certPaths, ctx.StringSlice("cert"))
 	if err != nil {
@@ -129,7 +132,15 @@ func getVerifier(ctx *cli.Context) (notation.Verifier, error) {
 			certPaths = append(certPaths, ref.Path)
 		}
 	}
-	return signature.NewVerifierFromFiles(certPaths)
+	jwsVerifier, err := signature.NewVerifierFromFiles(certPaths)
+	if err != nil {
+		return nil, fmt.Errorf("create jws verifier failed: %w", err)
+	}
+	coseVerifier, err := signature.NewCoseVerifierFromFiles(certPaths)
+	if err != nil {
+		return nil, fmt.Errorf("create cose verifier failed: %w", err)
+	}
+	return []notation.Verifier{jwsVerifier, coseVerifier}, nil
 }
 
 func appendCertPathFromName(paths, names []string) ([]string, error) {

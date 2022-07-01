@@ -51,6 +51,11 @@ var (
 		Aliases: []string{"pc"},
 		Usage:   "list of comma-separated {key}={value} pairs that are passed as is to the plugin, refer plugin documentation to set appropriate values",
 	}
+
+	FlagSignatureFormat = &cli.StringFlag{
+		Name:  "signatureFormat",
+		Usage: "signature envelope format used by plugin to generate envelope",
+	}
 )
 
 // KeyValueSlice is a flag with type int

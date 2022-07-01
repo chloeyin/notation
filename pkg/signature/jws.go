@@ -43,7 +43,7 @@ func NewSignerFromFiles(keyPath, certPath string) (notation.Signer, error) {
 }
 
 // NewSignerFromFiles creates a verifier from certificate files
-func NewVerifierFromFiles(certPaths []string) (*jws.Verifier, error) {
+func NewVerifierFromFiles(certPaths []string) (notation.Verifier, error) {
 	verifier := jws.NewVerifier()
 	verifier.VerifyOptions.Roots = x509.NewCertPool()
 	for _, path := range certPaths {

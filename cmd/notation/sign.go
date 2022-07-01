@@ -28,7 +28,7 @@ var signCommand = &cli.Command{
 		&cli.BoolFlag{
 			Name:  "push",
 			Usage: "push after successful signing",
-			Value: true,
+			Value: false,
 		},
 		&cli.StringFlag{
 			Name:  "push-reference",
@@ -39,6 +39,7 @@ var signCommand = &cli.Command{
 		flagPlainHTTP,
 		flagMediaType,
 		cmd.FlagPluginConfig,
+		cmd.FlagSignatureFormat,
 	},
 	Action: runSign,
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/notaryproject/notation-go"
 	"github.com/notaryproject/notation-go/plugin/manager"
+	"github.com/notaryproject/notation-go/signature/cose"
 	"github.com/notaryproject/notation-go/signature/jws"
 	"github.com/notaryproject/notation/pkg/config"
 	"github.com/notaryproject/notation/pkg/signature"
@@ -31,14 +32,25 @@ func GetSigner(ctx *cli.Context) (notation.Signer, error) {
 	// Construct a plugin signer if key name provided as the CLI argument
 	// corresponds to an external key
 	if key.ExternalKey != nil {
-		mgr := manager.New(config.PluginDirPath)
-		runner, err := mgr.Runner(key.PluginName)
-		if err != nil {
-			return nil, err
-		}
-		return jws.NewSignerPlugin(runner, key.ExternalKey.ID, key.PluginConfig)
+		return getPluginSigner(ctx, key)
 	}
 	return nil, errors.New("unsupported key, either provide a local key and certificate file paths, or a key name in config.json, check [DOC_PLACEHOLDER] for details")
+}
+
+// getPluginSigner get signer according to signature format
+func getPluginSigner(ctx *cli.Context, key config.KeySuite) (notation.Signer, error) {
+	mgr := manager.New(config.PluginDirPath)
+	runner, err := mgr.Runner(key.PluginName)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: now we use jws as default
+	if sigFormat := ctx.String(FlagSignatureFormat.Name); sigFormat == "" {
+		return jws.NewSignerPlugin(runner, key.ExternalKey.ID, key.PluginConfig)
+	} else if sigFormat == "cose" {
+		return cose.NewSignerPlugin(runner, key.ExternalKey.ID, key.PluginConfig)
+	}
+	return nil, errors.New("plugin signer not supported yet, only support cose")
 }
 
 // GetExpiry returns the signature expiry according to the CLI context.
