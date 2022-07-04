@@ -35,7 +35,6 @@ var verifyCommand = &cli.Command{
 		&cli.BoolFlag{
 			Name:  "pull",
 			Usage: "pull remote signatures before verification",
-			Value: false,
 		},
 		flagLocal,
 		flagUsername,

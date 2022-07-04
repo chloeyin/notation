@@ -28,7 +28,6 @@ var signCommand = &cli.Command{
 		&cli.BoolFlag{
 			Name:  "push",
 			Usage: "push after successful signing",
-			Value: false,
 		},
 		&cli.StringFlag{
 			Name:  "push-reference",
